@@ -9,18 +9,19 @@ const app = express()
 app.use(bodyParser.json());
 
 app.post('', async (req, res) => {
-    const { repository, tag, registry } = req.body;
+    const { cloneUrl, tag, registry, branch } = req.body;
     const cloneDest = `${Math.random().toString(36).substr(2, 9)}/${tag}`;
 
-    if (!repository || !tag || !registry) return res.status(400).send();
+    if (!cloneUrl || !tag || !registry) return res.status(400).send();
 
     const log = [];
 
     try {
-        await simpleGit.clone(repository, cloneDest);
-        tarStream = tar.pack(`/tmp/${cloneDest}`);
+        await simpleGit.clone(cloneUrl, cloneDest, branch ? ['--branch', branch] : []);
 
-        let stream = await docker.buildImage(tarStream, { t: `${registry}/${tag}` });
+        const tarStream = tar.pack(`/tmp/${cloneDest}`);
+
+        const stream = await docker.buildImage(tarStream, { t: `${registry}/${tag}` });
         await new Promise((resolve, reject) => {
             const onFinished = (err, output) => {
                 err ? reject() : resolve(output)
@@ -35,10 +36,8 @@ app.post('', async (req, res) => {
         });
 
         const image = docker.getImage(`${registry}/${tag}`);
-
         await new Promise((resolve, reject) => {
             image.push({}, (err, stream) => {
-
                 const onFinished = (err, output) => {
                     err ? reject() : resolve(output)
                     console.log(output);
@@ -53,12 +52,10 @@ app.post('', async (req, res) => {
             }, {});
         });
 
-        res.json(
-            {
-                image: `${registry}/${tag}`,
-                log: log,
-            }
-        );
+        res.json({
+            image: `${registry}/${tag}`,
+            log: log,
+        });
     } catch (error) {
         res.status(500).send({
             error,
