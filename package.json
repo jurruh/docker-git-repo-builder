@@ -9,7 +9,7 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "dockerode": "^3.0.2",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "simple-git": "^1.126.0",
     "tar-fs": "^2.0.0"
   }
